@@ -10,3 +10,7 @@
 Otwórz folder `images` w repozytorium i użyj **Add file → Upload files**. Wgraj zdjęcie w formacie JPEG. Nazwa musi być identyczna z nazwą pliku przepisu, z rozszerzeniem `.jpg` zamiast `.html`, np. `paella.html` → `images/paella.jpg`. Używaj małych liter i zachowaj myślniki.
 
 Po publikacji zdjęcie pojawi się w menu i na stronie przepisu. Aby je podmienić, wgraj inny JPEG pod tą samą nazwą i zapisz zmiany. Jeśli przeglądarka nadal pokazuje poprzednią wersję, odśwież stronę przez **Ctrl+F5**. Gdy zdjęcia brakuje, strona pomija miejsce na zdjęcie.
+
+## Wersje językowe
+
+Menu angielskie jest pod `index.html`, a polskie pod `index-pl.html`. Na każdej stronie przyciski **Polski** i **English** prowadzą do odpowiednika w drugim języku. Obie wersje przepisu korzystają z tego samego zdjęcia, np. `paella.html` i `paella-pl.html` korzystają z `images/paella.jpg`.

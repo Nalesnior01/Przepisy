@@ -91,3 +91,25 @@ h1, h2 { margin: 0; overflow-wrap: anywhere; }
 @media (min-width: 48rem) {
   .recipe-layout { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
 }
+
+.recipe-nav, .menu-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .85rem;
+}
+.menu-header h1 { flex-basis: 100%; }
+.language {
+  display: inline-flex;
+  gap: .2rem;
+  padding: .2rem;
+  border: 1px solid var(--line);
+  border-radius: 100vw;
+  background: var(--white);
+  color: var(--ink);
+  font-size: .95rem;
+}
+.language > * { padding: .35rem .7rem; border-radius: inherit; text-decoration: none; }
+.language a:hover { text-decoration: underline; }
+.language [aria-current="page"] { background: var(--green); color: var(--white); }

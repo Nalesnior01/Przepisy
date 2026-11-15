@@ -1,0 +1,110 @@
+name: Publish cookbook
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to import, e.g. v3. Leave blank to deploy main.'
+        required: false
+        type: string
+
+concurrency:
+  group: cookbook-pages
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Import the attached cookbook ZIP
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "Expected a version tag such as v3 or v3.1."
+            exit 1
+          fi
+          asset="Przepisy-GitHub-Pages-${RELEASE_TAG}.zip"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$asset" --output "$RUNNER_TEMP/cookbook.zip"
+
+          python3 - "$RUNNER_TEMP/cookbook.zip" <<'PY'
+          from pathlib import Path
+          from sys import argv
+          import re
+          from zipfile import ZipFile
+
+          required = {"index.html", "cookbook.css", "photos.js"}
+          optional = {"README.md", "images/README.md"}
+          with ZipFile(argv[1]) as archive:
+              files = [
+                  item for item in archive.infolist()
+                  if item.filename in required | optional
+                  or re.fullmatch(r"[a-z0-9-]+\.html", item.filename)
+              ]
+              names = {item.filename for item in files}
+              if not required <= names or len(names) != len(files):
+                  raise SystemExit("Invalid cookbook ZIP: missing or duplicate site files.")
+              for item in files:
+                  target = Path(item.filename)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(archive.read(item))
+          PY
+
+          git add --all
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m "Publish cookbook $RELEASE_TAG"
+            git push origin HEAD:main
+          fi
+
+      - name: Prepare public files
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/cookbook-site"
+          mkdir -p "$site/images"
+          cp -- ./*.html "$site/"
+          for file in cookbook.css photos.js; do
+            if [[ -f "$file" ]]; then
+              cp -- "$file" "$site/"
+            fi
+          done
+          shopt -s nullglob
+          for image in images/*.jpg; do
+            if [[ -f "$image" && ! -L "$image" ]]; then
+              cp -- "$image" "$site/images/"
+            fi
+          done
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/cookbook-site
+
+  deploy:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
